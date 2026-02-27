@@ -1,0 +1,110 @@
+package emu
+
+import (
+	"log"
+
+	"github.com/sarchlab/akita/v4/mem/mem"
+	"github.com/sarchlab/akita/v4/mem/vm"
+)
+
+// StorageAccessor provides memory access for ALU operations.
+type StorageAccessor interface {
+	Read(pid vm.PID, vAddr, byteSize uint64) []byte
+	Write(pid vm.PID, vAddr uint64, data []byte)
+}
+
+type storageAccessorImpl struct {
+	storage       *mem.Storage
+	addrConverter mem.AddressConverter
+	pageTable     vm.PageTable
+	log2PageSize  uint64
+}
+
+func (a *storageAccessorImpl) Read(pid vm.PID, vAddr, byteSize uint64) []byte {
+	data := make([]byte, byteSize)
+	sizeLeft := byteSize
+	offset := uint64(0)
+
+	for sizeLeft > 0 {
+		currVAddr := vAddr + offset
+		nextPageStart := ((currVAddr >> a.log2PageSize) + 1) << a.log2PageSize
+		sizeInPageLeft := nextPageStart - currVAddr
+		sizeToRead := sizeInPageLeft
+		if sizeToRead > sizeLeft {
+			sizeToRead = sizeLeft
+		}
+
+		page, found := a.pageTable.Find(pid, currVAddr)
+		if !found {
+			panic("page not found in page table")
+		}
+		pAddr := page.PAddr + (currVAddr - page.VAddr)
+
+		storageAddr := pAddr
+		if a.addrConverter != nil {
+			storageAddr = a.addrConverter.ConvertExternalToInternal(pAddr)
+		}
+
+		d, err := a.storage.Read(storageAddr, sizeToRead)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		copy(data[offset:], d)
+
+		offset += sizeToRead
+		sizeLeft -= sizeToRead
+	}
+
+	return data
+}
+
+func (a *storageAccessorImpl) Write(pid vm.PID, vAddr uint64, data []byte) {
+	sizeLeft := uint64(len(data))
+	offset := uint64(0)
+
+	for sizeLeft > 0 {
+		currVAddr := vAddr + offset
+		nextPageStart := ((currVAddr >> a.log2PageSize) + 1) << a.log2PageSize
+		sizeInPageLeft := nextPageStart - currVAddr
+		sizeToWrite := sizeInPageLeft
+		if sizeToWrite > sizeLeft {
+			sizeToWrite = sizeLeft
+		}
+
+		page, found := a.pageTable.Find(pid, vAddr)
+		if !found {
+			panic("page not found in page table")
+		}
+		pAddr := page.PAddr + (currVAddr - page.VAddr)
+
+		storageAddr := pAddr
+		if a.addrConverter != nil {
+			storageAddr = a.addrConverter.ConvertExternalToInternal(pAddr)
+		}
+
+		err := a.storage.Write(storageAddr, data[offset:offset+sizeToWrite])
+		if err != nil {
+			log.Panic(err)
+		}
+
+		offset += sizeToWrite
+		sizeLeft -= sizeToWrite
+	}
+}
+
+// NewStorageAccessor creates a StorageAccessor, injecting dependencies
+// of the storage and mmu.
+func NewStorageAccessor(
+	storage *mem.Storage,
+	pageTable vm.PageTable,
+	log2PageSize uint64,
+	addrConverter mem.AddressConverter,
+) StorageAccessor {
+	a := new(storageAccessorImpl)
+	a.storage = storage
+	a.addrConverter = addrConverter
+	a.pageTable = pageTable
+	a.log2PageSize = log2PageSize
+	return a
+}
