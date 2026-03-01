@@ -1,0 +1,17 @@
+Location,What,Value,Unit
+Driver,kernel_time,4e-06,s
+GPU[0].SA[0].CU[0],cu_inst_count,800,
+GPU[0].SA[0].CU[0],cu_CPI,4.5,
+GPU[0].SA[0].CU[0],simd_inst_count,400,
+GPU[0].SA[0].CU[0],simd_CPI,5.0,
+GPU[0].L1Cache[0],read_hit_count,640,
+GPU[0].L1Cache[0],read_miss_count,160,
+GPU[0].L2Cache,read_hit_count,120,
+GPU[0].L2Cache,read_miss_count,40,
+GPU[0].DRAM[0],read_trans_count,16,
+GPU[0].DRAM[0],write_trans_count,8,
+GPU[0].DRAM[0],read_size,2048,bytes
+GPU[0].DRAM[0],write_size,1024,bytes
+GPU[0].DRAM[0],read_avg_latency,1.5e-07,s
+GPU[0].L2ToDRAM,read_trans_count,16,
+GPU[0].L2ToDRAM,write_trans_count,8,

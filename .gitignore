@@ -23,6 +23,9 @@ venv/
 # Go
 go.sum
 .gopath/
+llm-optimizer/.go_cache
+llm-optimizer/.go_tmp
+llm-optimizer/kernels
 
 # Build artifacts
 node_modules/

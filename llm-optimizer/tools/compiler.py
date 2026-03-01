@@ -46,6 +46,10 @@ _GO_CACHE  = config.OPTIMIZER_ROOT / ".go_cache"
 _GO_TMP    = config.OPTIMIZER_ROOT / ".go_tmp"
 _GOPATH    = config.OPTIMIZER_ROOT / ".gopath"
 
+# Ensure Go work directories exist before any build
+for _d in (_GO_CACHE, _GO_TMP, _GOPATH):
+    _d.mkdir(parents=True, exist_ok=True)
+
 _GO_ENV = {
     **os.environ,
     "GOCACHE": str(_GO_CACHE),
@@ -67,6 +71,14 @@ def compile_kernel(kernel_source: str, iteration: int | None = None) -> CompileR
     """
     t0 = time.perf_counter()
 
+    # Back up existing .cl/.hsaco so we can restore them if the build fails
+    _cl_backup: str | None = None
+    _hsaco_backup_compile: bytes | None = None
+    if config.KERNEL_CL.exists():
+        _cl_backup = config.KERNEL_CL.read_text(encoding="utf-8")
+    if config.KERNEL_HSACO.exists():
+        _hsaco_backup_compile = config.KERNEL_HSACO.read_bytes()
+
     # 1. Save .cl sources
     config.KERNEL_CL.write_text(kernel_source, encoding="utf-8")
     log.info("[compiler] Wrote .cl → %s", config.KERNEL_CL)
@@ -86,6 +98,17 @@ def compile_kernel(kernel_source: str, iteration: int | None = None) -> CompileR
     build_result = _rebuild_go_binary_local()
     build_result.elapsed_s = time.perf_counter() - t0
     if not build_result.success:
+        # Restore previous .cl and .hsaco so the binary on disk stays consistent
+        # with the kernel source.  Without this, future simulator runs will panic
+        # because the binary embeds the old .hsaco while kernels.cl shows the new
+        # (broken) kernel.
+        log.warning("[compiler] Go build failed — restoring previous kernels.cl/.hsaco")
+        if _cl_backup is not None:
+            config.KERNEL_CL.write_text(_cl_backup, encoding="utf-8")
+            log.info("[compiler] Restored kernels.cl to previous version")
+        if _hsaco_backup_compile is not None:
+            config.KERNEL_HSACO.write_bytes(_hsaco_backup_compile)
+            log.info("[compiler] Restored kernels.hsaco to previous version")
         return build_result
 
     log.info("[compiler] Done in %.1fs", build_result.elapsed_s)

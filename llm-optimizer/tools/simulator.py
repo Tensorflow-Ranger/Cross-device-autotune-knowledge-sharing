@@ -91,6 +91,14 @@ def run_simulation(length: int | None = None, timeout: int | None = None, fallba
     log.error("[simulator] Local simulation failed (rc=%d): %s",
               result.returncode, result.stderr[:300])
 
+    # If the kernel triggered an unimplemented opcode, do NOT swallow it with
+    # synthetic metrics — propagate the real failure so the orchestrator can
+    # pass it to the planner for a corrected kernel.
+    if result.sim_panic:
+        log.error("[simulator] Simulator PANIC detected — skipping fallback so "
+                  "the orchestrator can recover: %s", result.sim_panic)
+        return result
+
     # Both failed: use fallback synthetic metrics if enabled
     if fallback:
         log.warning("[simulator] FALLBACK: writing synthetic metrics — results will NOT reflect kernel changes!")

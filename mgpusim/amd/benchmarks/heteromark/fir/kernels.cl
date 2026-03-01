@@ -1,40 +1,26 @@
-#define MAX_TAP 256
 
-__kernel void FIR(__global float* output,
-                  __global float* coeff,
-                  __global float* input,
-                  __global float* history,
-                  uint num_tap)
-{
-    uint gid = get_global_id(0);
-    uint lid = get_local_id(0);
-    uint lsize = get_local_size(0);
+__kernel void FIR(__global float* output, __global float* coeff,
+                  __global float* input, __global float* history, 
+                  uint num_tap) {
+  uint tid = get_global_id(0);
+  uint num_data = get_global_size(0);
 
-    __local float lcoeff[MAX_TAP];
-
-    /* Load coefficient taps into LDS */
-    for (uint i = lid; i < num_tap; i += lsize)
-    {
-        lcoeff[i] = coeff[i];
+  float sum = 0;
+  uint i = 0;
+  for (i = 0; i < num_tap; i++) {
+    if (tid >= i) {
+        sum = sum + coeff[i] * input[tid - i];
+    } else {
+        sum = sum + coeff[i] * history[num_tap - (i - tid)];
     }
-    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+  output[tid] = sum;
 
-    float sum = 0.0f;
+  /*barrier(CLK_GLOBAL_MEM_FENCE);*/
 
-    uint limit = (gid < num_tap) ? gid : (num_tap - 1);
+  /*[> fill the history buffer <]*/
+  /*if (tid >= numData - numTap + 1)*/
+    /*temp_input[tid - (numData - numTap + 1)] = temp_input[xid];*/
 
-    /* Convolution using current input samples */
-    for (uint i = 0; i <= limit; ++i)
-    {
-        sum += lcoeff[i] * input[gid - i];
-    }
-
-    /* Use history buffer for the remaining taps */
-    for (uint i = limit + 1; i < num_tap; ++i)
-    {
-        uint idx = num_tap - (i - gid);
-        sum += lcoeff[i] * history[idx];
-    }
-
-    output[gid] = sum;
+  /*barrier(CLK_GLOBAL_MEM_FENCE);*/
 }

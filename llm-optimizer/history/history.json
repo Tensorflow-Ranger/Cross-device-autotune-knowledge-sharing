@@ -1,0 +1,38 @@
+[
+  {
+    "iteration": 1,
+    "strategy": "No prior analysis available \u2014 start with the most impactful baseline optimisation.",
+    "metrics": {
+      "kernel_time_s": 4e-06,
+      "l1_miss_rate": 1.0,
+      "l2_miss_rate": 1.0,
+      "l1_hit": 0,
+      "l1_miss": 1,
+      "l2_hit": 0,
+      "l2_miss": 18,
+      "avg_cpi": null,
+      "dram_read_bytes": 0.0
+    },
+    "bottleneck": {
+      "bound_by": "memory_bound",
+      "bottleneck_summary": "All memory accesses miss both L1 and L2 caches, making the kernel completely memory\u2011bound.",
+      "l1_miss_rate": 1.0,
+      "l2_miss_rate": 1.0,
+      "avg_cpi": null,
+      "kernel_time_s": 4e-06,
+      "recommendations": [
+        "Reorder data accesses to achieve coalesced 64\u2011byte loads/stores",
+        "Stage frequently reused data in __local (LDS) to cut global traffic",
+        "Align structures and arrays to 64\u2011byte boundaries",
+        "Reduce overall global memory reads/writes where possible"
+      ]
+    },
+    "kernel_time_s": 4e-06,
+    "time_delta_pct": null,
+    "bound_by": "memory_bound",
+    "is_fallback": false,
+    "sim_method": "local",
+    "db_file": "akita_sim_d6i35o35s3pk0vvifv3g.sqlite3",
+    "sim_panic": ""
+  }
+]

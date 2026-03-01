@@ -53,7 +53,6 @@ AMDGPU_CPU         = os.environ.get("AMDGPU_CPU", "gfx803")   # GCN3 target
 FIR_LENGTH         = int(os.environ.get("FIR_LENGTH", "8"))
 SIM_TIMEOUT        = int(os.environ.get("SIM_TIMEOUT", "120"))  # seconds
 SIMULATION_FLAGS   = [
-    f"-length={FIR_LENGTH}",
     "-timing",
     "--report-all",
     "-disable-rtm",
